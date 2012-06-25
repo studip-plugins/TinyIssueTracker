@@ -1,4 +1,4 @@
-!!!!<?= $pagename ?><?= "\n" ?>
+!!!![nop]<?= $pagename ?>[/nop]<?= "\n" ?>
 Zusammenfassung: <?= Request::get("zusammenfassung") ?><?= "\n" ?>
 Autor: <? if (keywordExists(get_fullname(), $_SESSION['SessionSeminar'])) : ?>
 [[<?= get_fullname() ?>]]
@@ -16,4 +16,6 @@ Erstellt: <?= date('Y-m-d H:i',time()) ?><?= "\n" ?>
 Status: <?= $status ?><?= "\n" ?>
 Beschreibung:<?= "\n" ?>
 <?= "\n" ?>
-<?= Request::get("beschreibung") ?>
+<?= Request::get("beschreibung") ?><?= "\n" ?>
+<?= "\n" ?>
+<?= $additional_description ?>

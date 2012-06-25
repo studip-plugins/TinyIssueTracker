@@ -34,7 +34,7 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
 
     public static function createissue_markup($markup, $matches) {
         $type = $matches[1];
-        $attributes = $GLOBALS['issues_templates'][$type];
+        $attributes = self::getAttributes($type);
         $template = self::getTemplate("issueform.php", null);
         $template->set_attribute('keyword', Request::get("keyword") ? Request::get("keyword") : "WikiWikiWeb");
         $template->set_attribute('name', $attributes['prefix']);
@@ -44,21 +44,22 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
     }
 
     public static function issuelist_markup($markup, $matches, $content) {
+        PageLayout::addScript("jquery.tablesorter.min.js");
         $type = $matches[1];
         $option = $matches[2];
         $keyword = Request::get("keyword") ? Request::get("keyword") : "WikiWikiWeb";
-        $template = $GLOBALS['issues_templates'][$type];
+        $template = self::getAttributes($type);
         if (!$template) {
             return $markup->format($matches[0]);
         }
         $opt = array('q' => $option);
         $opt = array_merge($opt,(array)$_REQUEST);
-        $list = self::getissuepagelist($type);
-        $out[] = "<table border='1' cellspacing='0' cellpadding='3'></tr>";
+        $list = self::getissuepagelist($type); //<a href='".URLHelper::getLink("?keyword=$keyword&order=".urlencode($h['order']))."'>
+        $out[] = "<table border='1' cellspacing='0' cellpadding='3' class='issuelist'><thead></tr>";
         foreach ($template['listheader'] as $h) {
-            $out[]="<th><a href='".URLHelper::getLink("?keyword=$keyword&order=".urlencode($h['order']))."'>{$h['heading']}</a></th>";
+            $out[]="<th>{$h['heading']}</th>";
         }
-        $out[]="</tr>\n";
+        $out[]="</tr></thead>\n";
         $terms = preg_split('/((?<!\\S)[-+]?[\'"].*?[\'"](?!\\S)|\\S+)/',
             $opt['q'],-1,PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
         foreach($terms as $t) {
@@ -90,32 +91,36 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
         }
         $cmp = self::createOrderFunction(@$opt['order'].",".$template['stdorder']);
         usort($slist,$cmp);
+        $out[] = "<tbody>";
         foreach($slist as $s) {
             $out[] = "<tr><td><font size=-1><a href='".URLHelper::getLink("?keyword=$s[name]")."'>$s[name]</a></font></td>";
             foreach($template['listview'] as $h)
                 $out[] = @"<td><font size=-1>".$markup->format($s[$h])."&nbsp;</font></td>";
                 $out[] = "</tr>";
         }
+        $out[] = "</tbody>";
         $out[] = "</table>";
+        $out[] = '<script>jQuery(function () {jQuery("table.issuelist").tablesorter(); });</script>';
         return str_replace("\n", "", implode('',$out));
     }
 
 
     protected function wiki_newissue($type) {
-        $template = $GLOBALS['issues_templates'][$type];
+        $template = self::getAttributes($type);
         extract($_POST,EXTR_SKIP); // locally set post-vars for template
         foreach (self::getissuepagelist($type) as $l) {
             $issue = max(@$issue, substr($l, strlen($template['prefix'])));
         }
         $pagename = sprintf("%s%05d", $template['prefix'], @$issue+1);
         $user_id = $GLOBALS['user']->id;
-
+		var_dump($template['additional_description']);
         $wiki_text_template = self::getTemplate(file_exists(dirname(__file__)."/templates/".$type."_wiki_text.php") ? $type."_wiki_text.php" : "issue_wiki_text.php", null);
         $wiki_text_template->set_attribute("pagename", $pagename);
         $wiki_text_template->set_attribute("status", $template['defaultstatus']);
+        $wiki_text_template->set_attribute("additional_description", $template['additional_description']);
         $wiki_text = $wiki_text_template->render();
 
-        if (Request::get($type."_create_topic")) {
+        if (Request::get("create_topic")) {
             $forum_text = sprintf(_("Die aktuellste Fassung dieses %s finden Sie immer im %sWiki%s"),$template['prefix'], '[',']'.URLHelper::getURL($GLOBALS['ABSOLUTE_URI_STUDIP'].'wiki.php?keyword='.$pagename)) . " \n--\n". Request::get("beschreibung");
             if($tt = CreateTopic($pagename . ': ' . Request::get($type."_zusammenfassung"), get_fullname($user_id), $forum_text, 0, 0, $_SESSION['SessionSeminar'],$user_id)) {
                 $message = MessageBox::success(_('Ein neues Thema im Forum wurde angelegt.'));
@@ -141,7 +146,7 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
 
 
     public static function liftersprogress_markup($markup, $matches) {
-        $template = $GLOBALS['issues_templates']["lifters"];
+        $template = self::getAttributes("lifters");
         $keyword = Request::get("keyword") ? Request::get("keyword") : "WikiWikiWeb";
         
         $lnr = $matches[1];
@@ -199,7 +204,7 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
     }
     
     protected static function getissuepagelist($type) {
-        $template = $GLOBALS['issues_templates'][$type];
+        $template = self::getAttributes($type);
         $query = "SELECT DISTINCT keyword FROM wiki WHERE range_id = ? AND keyword LIKE CONCAT(?, '%')";
         $statement = DBManager::get()->prepare($query);
         $statement->execute(array(
@@ -208,6 +213,39 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
         ));
         $list = $statement->fetchAll(PDO::FETCH_COLUMN);
         return $list;
+    }
+    
+    protected static function getAttributes($type) {
+        $attributes = $GLOBALS['issues_templates'][$type];
+        $default_attributes = self::getDefaultIssueAttributes();
+        $default_attributes['listheader'][0]['heading'] = $attributes['prefix']."#";
+        return array_merge($default_attributes, $attributes);
+    }
+    
+    private static function getDefaultIssueAttributes() {
+        return array(
+            // list of fields to parse for list view, matching is case-insensitive
+            // order must be same as indicated by listheader
+            // first field (name) will be added
+            "listview"=>array('erstellt','autor','zuständig','version','komplexität','status','zusammenfassung'),
+            // standard order of fields for sort function
+            "stdorder"=>'-erstellt,status,version,autor,zuständig,zusammenfassung',
+            // header for list tables, first column always is the pages name
+            // order defines order criterion for sort action
+            "listheader"=>array(
+                array("order"=>"-name","heading"=>"Issue#"),
+                array("order"=>"erstellt", "heading"=>"Erstellt"),
+                array("order"=>"autor", "heading"=>"Autor"),
+                array("order"=>"zuständig", "heading"=>"Zuständig"),
+                array("order"=>"version", "heading"=>"Version"),
+                array("order"=>"komplexität", "heading"=>"Komplex."),
+                array("order"=>"status", "heading"=>"Status"),
+                array("order"=>"zusammenfassung", "heading"=>"Zusammenfassung")
+            ),
+            //status of a new issue:
+            'defaultstatus' => "neu",
+			'additional_description' => ""
+        );
     }
     
     

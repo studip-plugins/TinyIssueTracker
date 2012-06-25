@@ -16,51 +16,15 @@ $GLOBALS['issues_templates']['lifters'] = array(
     // must be a WikiWord and should be unique to
     // avoid conflicts with other templates
     'prefix' => 'LifTers',
-    // list of fields to parse for list view, matching is case-insensitive
-    // order must be same as indicated by listheader
-    // first field (name) will be added
-    "listview"=>array('erstellt','autor','zuständig','version','komplexität','status','zusammenfassung'),
-    // standard order of fields for sort function
-    "stdorder"=>'-erstellt,status,version,autor,zuständig,zusammenfassung',
-    // header for list tables, first column always is the pages name
-    // order defines order criterion for sort action
-    "listheader"=>array(
-        array("order"=>"-name","heading"=>"Lifters#"),
-        array("order"=>"erstellt", "heading"=>"Erstellt"),
-        array("order"=>"autor", "heading"=>"Autor"),
-        array("order"=>"zuständig", "heading"=>"Zuständig"),
-        array("order"=>"version", "heading"=>"Version"),
-        array("order"=>"komplexität", "heading"=>"Komplex."),
-        array("order"=>"status", "heading"=>"Status"),
-        array("order"=>"zusammenfassung", "heading"=>"Zusammenfassung")
-    ),
-    'defaultstatus' => "neu"
+	// additional markup for a lifter
+	'additional_description' => "(:liftersprogress:)"
 );
 
 $GLOBALS['issues_templates']['step'] = array(
     // common prefix to alle newly created pages
     // must be a WikiWord and should be unique to
     // avoid conflicts with other templates
-    'prefix' => 'StEP',
-    // list of fields to parse for list view, matching is case-insensitive
-    // order must be same as indicated by listheader
-    // first field (name) will be added
-    "listview"=>array('erstellt','autor','zuständig','version','komplexität','status','zusammenfassung'),
-    // standard order of fields for sort function
-    "stdorder"=>'-erstellt,status,version,autor,zuständig,zusammenfassung',
-    // header for list tables, first column always is the pages name
-    // order defines order criterion for sort action
-    "listheader"=>array(
-        array("order"=>"-name","heading"=>"StEP#"),
-        array("order"=>"erstellt", "heading"=>"Erstellt"),
-        array("order"=>"autor", "heading"=>"Autor"),
-        array("order"=>"zuständig", "heading"=>"Zuständig"),
-        array("order"=>"version", "heading"=>"Version"),
-        array("order"=>"komplexität", "heading"=>"Komplex."),
-        array("order"=>"status", "heading"=>"Status"),
-        array("order"=>"zusammenfassung", "heading"=>"Zusammenfassung")
-    ),
-    'defaultstatus' => "neu"
+    'prefix' => 'StEP'
 );
 
 
@@ -74,7 +38,7 @@ $GLOBALS['issues_templates']['biest'] = array(
     // first field (name) will be added
     "listview"=>array('erstellt','autor','zuständig','version','status','zusammenfassung'),
     // standard order of fields for sort function
-    "stdorder"=>'-erstellt,status,autor,zuständig,version,beschreibung',
+    //"stdorder"=>'-erstellt,status,autor,zuständig,version,beschreibung',
     // header for list tables, first column always is the pages name
     // order defines order criterion for sort action
     "listheader" => array(
