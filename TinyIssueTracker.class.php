@@ -113,8 +113,7 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
         }
         $pagename = sprintf("%s%05d", $template['prefix'], @$issue+1);
         $user_id = $GLOBALS['user']->id;
-		var_dump($template['additional_description']);
-        $wiki_text_template = self::getTemplate(file_exists(dirname(__file__)."/templates/".$type."_wiki_text.php") ? $type."_wiki_text.php" : "issue_wiki_text.php", null);
+	$wiki_text_template = self::getTemplate(file_exists(dirname(__file__)."/templates/".$type."_wiki_text.php") ? $type."_wiki_text.php" : "issue_wiki_text.php", null);
         $wiki_text_template->set_attribute("pagename", $pagename);
         $wiki_text_template->set_attribute("status", $template['defaultstatus']);
         $wiki_text_template->set_attribute("additional_description", $template['additional_description']);
@@ -122,7 +121,7 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
 
         if (Request::get("create_topic")) {
             $forum_text = sprintf(_("Die aktuellste Fassung dieses %s finden Sie immer im %sWiki%s"),$template['prefix'], '[',']'.URLHelper::getURL($GLOBALS['ABSOLUTE_URI_STUDIP'].'wiki.php?keyword='.$pagename)) . " \n--\n". Request::get("beschreibung");
-            if($tt = CreateTopic($pagename . ': ' . Request::get($type."_zusammenfassung"), get_fullname($user_id), $forum_text, 0, 0, $_SESSION['SessionSeminar'],$user_id)) {
+            if($tt = CreateTopic($pagename . ': ' . Request::get("zusammenfassung"), get_fullname($user_id), $forum_text, 0, 0, $_SESSION['SessionSeminar'], $user_id)) {
                 $message = MessageBox::success(_('Ein neues Thema im Forum wurde angelegt.'));
                 PageLayout::postMessage($message);
                 $wiki_text = '['._("Link zum Forumsbeitrag").']' . URLHelper::getURL($GLOBALS['ABSOLUTE_URI_STUDIP'] . 'forum.php?open=' . $tt . '#anker') . " \n--\n" . $wiki_text;
