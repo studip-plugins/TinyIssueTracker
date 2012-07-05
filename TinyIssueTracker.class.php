@@ -1,7 +1,11 @@
 <?php
 
 /*
+ *  Copyright 2004-2009 Patrick R. Michaud (pmichaud@pobox.com)
+ *  Copyright 2004-2009 Tobias Thelen <tobias.thelen@uos.de>
  *  Copyright (c) 2012  Rasmus Fuhse <fuhse@data-quest.de>
+ * 
+ *  This file was part of PITS (PmWiki Issue Tracking System).
  * 
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as
