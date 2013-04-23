@@ -4,9 +4,9 @@
  *  Copyright 2004-2009 Patrick R. Michaud (pmichaud@pobox.com)
  *  Copyright 2004-2009 Tobias Thelen <tobias.thelen@uos.de>
  *  Copyright (c) 2012  Rasmus Fuhse <fuhse@data-quest.de>
- * 
+ *
  *  This file was part of PITS (PmWiki Issue Tracking System).
- * 
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as
  *  published by the Free Software Foundation; either version 2 of
@@ -18,10 +18,10 @@ require_once 'lib/wiki.inc.php';
 require_once dirname(__file__).'/old_templates.php';
 
 class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
-    
+
     public function __construct() {
         parent::__construct();
-        
+
         if (Request::get('issue_action')) {
             $type = str_replace("new_", "", trim(Request::get('issue_action')));
             self::wiki_newissue($type);
@@ -29,11 +29,11 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
 
         $types = array_keys($GLOBALS['issues_templates']);
         foreach ($types as $type) {
-            WikiFormat::addWikiMarkup($type."list", '\\(:('.$type.')list\\s*(.*?):\\)', "", "TinyIssueTracker::issuelist_markup");
-            WikiFormat::addWikiMarkup("create".$type, '\\(:('.$type.')form:\\)', "", "TinyIssueTracker::createissue_markup");
+            WikiFormat::addWikiMarkup($type."list", '\\(:('.$type.')list\\s*(.*?):\\)', null, "TinyIssueTracker::issuelist_markup");
+            WikiFormat::addWikiMarkup("create".$type, '\\(:('.$type.')form:\\)', null, "TinyIssueTracker::createissue_markup");
         }
 
-        WikiFormat::addWikiMarkup("liftersprogress", '\\(:liftersprogress\\s*(.*?):\\)', "", "TinyIssueTracker::liftersprogress_markup");
+        WikiFormat::addWikiMarkup("liftersprogress", '\\(:liftersprogress\\s*(.*?):\\)', null, "TinyIssueTracker::liftersprogress_markup");
     }
 
     public static function createissue_markup($markup, $matches) {
@@ -125,10 +125,12 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
 
         if (Request::get("create_topic")) {
             $forum_text = sprintf(_("Die aktuellste Fassung dieses %s finden Sie immer im %sWiki%s"),$template['prefix'], '[',']'.URLHelper::getURL($GLOBALS['ABSOLUTE_URI_STUDIP'].'wiki.php?keyword='.$pagename)) . " \n--\n". Request::get("beschreibung");
-            if($tt = CreateTopic($pagename . ': ' . Request::get("zusammenfassung"), get_fullname($user_id), $forum_text, 0, 0, $_SESSION['SessionSeminar'], $user_id)) {
+
+
+            if($tt = self::createTopic($pagename . ': ' . Request::get("zusammenfassung"),  $forum_text, $_SESSION['SessionSeminar'] , $user_id)) {
                 $message = MessageBox::success(_('Ein neues Thema im Forum wurde angelegt.'));
                 PageLayout::postMessage($message);
-                $wiki_text = '['._("Link zum Forumsbeitrag").']' . URLHelper::getURL($GLOBALS['ABSOLUTE_URI_STUDIP'] . 'forum.php?open=' . $tt . '#anker') . " \n--\n" . $wiki_text;
+                $wiki_text = '['._("Link zum Forumsbeitrag").']' . URLHelper::getScriptURL($GLOBALS['ABSOLUTE_URI_STUDIP'].'plugins.php/coreforum/index/index/' . $tt . '#' . $tt) . " \n--\n" . $wiki_text;
             }
         }
 
@@ -151,7 +153,7 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
     public static function liftersprogress_markup($markup, $matches) {
         $template = self::getAttributes("lifters");
         $keyword = Request::get("keyword") ? Request::get("keyword") : "WikiWikiWeb";
-        
+
         $lnr = $matches[1];
         # retrieve ID of lifters from keyword of wiki page
         if (!$lnr && Request::get('keyword')) {
@@ -195,7 +197,7 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
 
     protected function createOrderFunction($order) {
         $code = '';
-        foreach(preg_split('/[\\s,|]+/',strtolower($order),-1,PREG_SPLIT_NO_EMPTY) 
+        foreach(preg_split('/[\\s,|]+/',strtolower($order),-1,PREG_SPLIT_NO_EMPTY)
             as $o) {
             if (substr($o,0,1)=='-') { $r='-'; $o=substr($o,1); }
             else $r='';
@@ -205,26 +207,26 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
         $code .= "return 0;\n";
         return create_function('$x,$y',$code);
     }
-    
+
     protected static function getissuepagelist($type) {
         $template = self::getAttributes($type);
         $query = "SELECT DISTINCT keyword FROM wiki WHERE range_id = ? AND keyword LIKE CONCAT(?, '%')";
         $statement = DBManager::get()->prepare($query);
         $statement->execute(array(
-            $_SESSION['SessionSeminar'], 
+            $_SESSION['SessionSeminar'],
             $template['prefix']
         ));
         $list = $statement->fetchAll(PDO::FETCH_COLUMN);
         return $list;
     }
-    
+
     protected static function getAttributes($type) {
         $attributes = $GLOBALS['issues_templates'][$type];
         $default_attributes = self::getDefaultIssueAttributes();
         $default_attributes['listheader'][0]['heading'] = $attributes['prefix']."#";
         return array_merge($default_attributes, $attributes);
     }
-    
+
     private static function getDefaultIssueAttributes() {
         return array(
             // list of fields to parse for list view, matching is case-insensitive
@@ -250,8 +252,8 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
 			'additional_description' => ""
         );
     }
-    
-    
+
+
     protected static $template_factory = null;
 
     protected static function getTemplate($template_file_name, $layout = "without_infobox") {
@@ -267,5 +269,39 @@ class TinyIssueTracker extends StudIPPlugin implements SystemPlugin {
         }
         return $template;
     }
-    
+
+    static function createTopic($title, $content, $seminar_id, $user_id)
+    {
+        if (PluginEngine::getPlugin('CoreForum') && ForumEntry::getConstraints($seminar_id)) {
+            $db = DBManager::get();
+            $st = $db->prepare("SELECT category_id FROM forum_categories
+                                WHERE seminar_id = ? AND entry_name LIKE 'Aktive %'");
+            $st->execute(array($seminar_id));
+            $cat_id = $st->fetchColumn();
+            $topic_id = md5(uniqid('CoreForum'));
+            ForumEntry::insert(array(
+                'topic_id'    => $topic_id,
+                'seminar_id'  => $seminar_id,
+                'user_id'     => $user_id,
+                'name'        => $title,
+                'content'     => $title,
+                'author'      => get_fullname($user_id),
+                'author_host' => $_SERVER['REMOTE_ADDR']
+            ), $seminar_id);
+            if ($cat_id) {
+                ForumCat::addArea($cat_id, $topic_id);
+            }
+            $topic_id2 = md5(uniqid('CoreForum'));
+            ForumEntry::insert(array(
+                'topic_id'    => $topic_id2,
+                'seminar_id'  => $seminar_id,
+                'user_id'     => $user_id,
+                'name'        => $title,
+                'content'     => $content,
+                'author'      => get_fullname($user_id),
+                'author_host' => $_SERVER['REMOTE_ADDR']
+            ), $topic_id);
+            return true;
+        }
+    }
 }
