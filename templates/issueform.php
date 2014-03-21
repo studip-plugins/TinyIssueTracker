@@ -17,8 +17,10 @@
         <td>Version:</td>
         <td>
             <select size=0 name="software_version">
-                <option value="2.5">2.5 (Oktober 2013)</option>
-                <option value="2.6">2.6 (April 2014)</option>
+                <option value="3.1">3.1 (Oktober 2014)</option>
+                <option value="3.2">3.2 (April 2015)</option>
+                <option value="3.3">3.3 (Oktober 2015)</option>
+                <option value="3.4">3.4 (April 2016)</option>
                 <option>unbestimmt</option>
             </select>
         </td>
